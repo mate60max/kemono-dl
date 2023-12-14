@@ -1,21 +1,14 @@
 #!/usr/bin/env python3
 
 import os
-import re
 import sys
 import json
-from threading import local
 import time
-from urllib import response
 import requests
 import json
-import queue
-import urllib.parse
 import logging
 from tqdm import tqdm
 import shutil
-import signal
-import concurrent.futures
 
 USE_PROXY = False
 
@@ -91,28 +84,10 @@ def http_download(url, output_path, log_start=None, remove_if_err=False, show_pr
             os.remove(output_path)
     return False
 
-def read_plain_urls(path):
-    with open(path, 'r') as f:
-        return f.readlines()
-
-def write_plain_urls(urls, file):
-    with open(file, 'w') as f:
-        for url in urls:
-            f.write(f'{url}\n')
-
-default_executor = None
-def signal_handler(sig, frame):
-    logging.warning('You pressed Ctrl+C!')
-    if default_executor:
-        logging.info(f'Tasks remaining in executor.queue: {default_executor._work_queue.qsize()} to cancel.')
-        default_executor.shutdown(False, cancel_futures=True)
-        logging.warning(f'The default_executor has been shutdown..')
-    # do something here
-
 DEFAULT_CREATORS_FILE='kemono-db/creators.json'
 DEFAULT_POSTS_DIR='kemono-db/posts'
-# DEFAULT_POSTS_DATA_DIR='kemono-data/posts'
-DEFAULT_POSTS_DATA_DIR='/Volumes/left-2T/down/kemono-data/posts'
+DEFAULT_POSTS_DATA_DIR='kemono-data/posts'
+# DEFAULT_POSTS_DATA_DIR='/Volumes/left-2T/down/kemono-data/posts'
 
 def save_creators(creators, creators_file=DEFAULT_CREATORS_FILE):
     par_dir = os.path.dirname(os.path.abspath(creators_file))
@@ -156,63 +131,17 @@ def load_creator_posts(creator, posts_dir=DEFAULT_POSTS_DIR):
 
 class UrlParser:
 
-    _actor_id_pattern = re.compile(r'movies.html\?a=(\w+)')
-    _movie_id_pattern = re.compile(r'movie.html\?id=(\w+)')
-    _url_root_pattern = re.compile(r'(https://[^/]+)/')
-    _url_path_pattern = re.compile(r'(https://[^\?]+)')
-
     @staticmethod
     def makeAPI_getCreatorPosts(service, creatorId, offset=0, url_root='https://kemono.su/api/v1'):
         return f'{url_root}/{service}/user/{creatorId}?o={offset}'
     
+    @staticmethod
     def makeDownloads(path, url_root='https://kemono.su'):
         if path.startswith('/'):
             return f'{url_root}{path}'
         else:
             return f'{url_root}/{path}'
 
-    @staticmethod
-    def parse_actor_id(url):
-        pats = re.findall(UrlParser._actor_id_pattern, url)
-        parser_logger.debug(pats)
-        return pats[0]
-
-    @staticmethod
-    def parse_movie_id(url):
-        pats = re.findall(UrlParser._movie_id_pattern, url)
-        parser_logger.debug(pats)
-        return pats[0]
-
-    @staticmethod
-    def parse_url_root(url):
-        pats = re.findall(UrlParser._url_root_pattern, url)
-        parser_logger.debug(pats)
-        return pats[0]
-
-    @staticmethod
-    def parse_url_path(url):
-        pats = re.findall(UrlParser._url_path_pattern, url)
-        parser_logger.debug(pats)
-        return pats[0]
-    
-    @staticmethod
-    def parse_url_file(url):
-        return url.split('/')[-1].split('?')[0]
-    
-    @staticmethod
-    def parse_file_ext(file):
-        return file.split('.')[-1]
-    
-    @staticmethod
-    def get_full_url(url_root, relative_path):
-        if relative_path.startswith('http'):
-            return relative_path
-        return f'{url_root}{relative_path}' if relative_path.startswith('/') else f'{url_root}/{relative_path}'
-    
-    @staticmethod
-    def get_actor_url(url_path, actor_id):
-        return f'{url_path}?a={actor_id}'
-    
 class KemonoAPIClient:
 
     @staticmethod
@@ -266,6 +195,7 @@ class KemonoAPIClient:
         else:
             return list(all_posts.values())
     
+    @staticmethod
     def sync_posts(creator, posts, do_download=True):
         if not creator or not posts:
             logging.error('creator or posts is None.')
@@ -309,10 +239,10 @@ class KemonoAPIClient:
 def test():
     parser_logger.setLevel(logging.DEBUG)
     http_logger.setLevel(logging.DEBUG)
-    creator = load_creators()[0]
-    posts_todo = load_creator_posts(creator)
+    # creator = load_creators()[0]
+    # posts_todo = load_creator_posts(creator)
     # posts_todo = KemonoAPIClient.pull_creator_posts(creator, new_only=False)
-    KemonoAPIClient.sync_posts(creator, posts_todo, do_download=False)
+    # KemonoAPIClient.sync_posts(creator, posts_todo, do_download=False)
 
     pass
     # cnt = 0
