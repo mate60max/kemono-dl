@@ -5,7 +5,6 @@ import sys
 import json
 import time
 import requests
-import json
 import logging
 from tqdm import tqdm
 import shutil
@@ -18,8 +17,9 @@ parser_logger.setLevel(logging.INFO)
 http_logger = logging.getLogger("myhttp")
 http_logger.setLevel(logging.INFO)
 
-PROXIES = dict(http='socks5://127.0.0.1:7890',
-               https='socks5://127.0.0.1:7890') if USE_PROXY else {}
+PROXIES = dict(http='http://127.0.0.1:7890',
+               https='http://127.0.0.1:7890') if USE_PROXY else {}
+SHOW_PROGRESS = True
 
 HEADERS = {
     'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:105.0) Gecko/20100101 Firefox/105.0',
@@ -231,7 +231,7 @@ class KemonoAPIClient:
 
             if do_download:
                 for download in todown:
-                    http_download(download['remote'], download['local'], show_progress=True)
+                    http_download(download['remote'], download['local'], show_progress=SHOW_PROGRESS)
             
         return todos
         
@@ -252,6 +252,17 @@ def test():
 if __name__ == '__main__':
     # signal.signal(signal.SIGINT, signal_handler)  
     # signal.signal(signal.SIGTERM, signal_handler)
+
+    kemono_proxy_setting = os.environ.get('KEMONO_PROXY_SETTING', None)
+    if kemono_proxy_setting:
+        logging.info(f'KEMONO_PROXY_SETTING: {kemono_proxy_setting}')
+        PROXIES['http'] = kemono_proxy_setting
+        PROXIES['https'] = kemono_proxy_setting
+    hide_progress = os.environ.get('KEMONO_HIDE_PROGRESS', None)
+    if hide_progress:
+        logging.info(f'KEMONO_HIDE_PROGRESS: {hide_progress}')
+        SHOW_PROGRESS = False
+
 
     if len(sys.argv) > 1:
         arg = sys.argv[1].strip()
@@ -294,9 +305,15 @@ if __name__ == '__main__':
             for creator in creators:
                 posts = KemonoAPIClient.pull_creator_posts(creator, new_only=False)
                 KemonoAPIClient.sync_posts(creator, posts, do_download=True)
+        elif arg.startswith('wait'):
+            print(f'[==] Waiting for input..')
+            while True:
+                time.sleep(1000)
         else:
             print(f'[X] Unsupported input arg, exit..')
     else:
         print(f'[==] No arg found, processing default operations..')
         test()
+
+    print(f'Usage: kemono [fetch | pull | scan | download | sync | wait]')
    
